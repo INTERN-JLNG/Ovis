@@ -49,13 +49,31 @@ if __name__ == '__main__':
     parser.add_argument('--flagging_dir', type=str, default=os.path.expanduser('~/ovis-flagged'))
     parser.add_argument('--max_partition', type=int, default=9)
     parser.add_argument('--port', type=int, required=True)
+    
+    # ECP Two-Stage Reasoning Arguments
+    parser.add_argument('--enable_ecp_two_stage', action='store_true', 
+                       help='Enable ECP two-stage reasoning')
+    parser.add_argument('--ecp_perception_max_new_tokens', type=int, default=256,
+                       help='Max tokens for perception stage')
+    parser.add_argument('--ecp_perception_temperature', type=float, default=0.7,
+                       help='Temperature for perception stage')
+    
     args = parser.parse_args()
 
     os.makedirs(args.flagging_dir, exist_ok=True)
     runner_args = RunnerArguments(
         model_path=args.model_path,
-        max_partition=args.max_partition
+        max_partition=args.max_partition,
+        enable_ecp_two_stage=args.enable_ecp_two_stage,
+        ecp_perception_max_new_tokens=args.ecp_perception_max_new_tokens,
+        ecp_perception_temperature=args.ecp_perception_temperature
     )
+    
+    # Create interface title with ECP indicator
+    title = args.model_path.split('/')[-1]
+    if args.enable_ecp_two_stage:
+        title += " (ECP Two-Stage Reasoning)"
+    
     demo = gr.Interface(
         fn=Server(OvisRunner(runner_args)),
         inputs=[gr.Radio(["Image", "Video", "TextOnly"], label="Choose Modality Type"),
@@ -63,7 +81,7 @@ if __name__ == '__main__':
                 Video(label='video', format='mp4'),
                 Textbox(placeholder='Enter your text here...', label='prompt')],
         outputs=gr.Markdown(),
-        title=args.model_path.split('/')[-1],
+        title=title,
         flagging_dir=args.flagging_dir
     )
     demo.launch(server_port=args.port)
